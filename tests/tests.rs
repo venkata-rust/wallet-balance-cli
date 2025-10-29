@@ -3,7 +3,8 @@
 //! These are pass-to-pass tests that verify existing functionality
 //! continues to work as expected.
 
-use wallet_balance::{bitcoin_wallet, ethereum_wallet, Network};
+use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, Network};
+
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -164,3 +165,35 @@ async fn test_concurrent_api_calls() {
     // Pass if at least Bitcoin works (more reliable API)
     assert!(btc_ok, "Bitcoin call should succeed");
 }
+
+// ============================================================================
+// FAIL-TO-PASS TESTS: Base L2 (2 tests) - PR #1
+// ============================================================================
+
+#[tokio::test]
+async fn test_base_balance_returns_valid_structure() {
+    sleep(Duration::from_secs(1)).await;
+    
+    // Coinbase deployer address on Base
+    let address = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
+    let result = base_wallet::get_balance(address).await;
+    
+    if let Err(e) = &result {
+        eprintln!("Base API error: {}", e);
+    }
+    
+    assert!(result.is_ok(), "Base balance fetch should succeed");
+    
+    let balance = result.unwrap();
+    assert_eq!(balance.network, "base");
+    assert_eq!(balance.denomination, "ETH");
+    assert!(balance.address.starts_with("0x"));
+}
+
+#[tokio::test]
+async fn test_base_invalid_address_returns_error() {
+    let invalid_address = "0xinvalidbase";
+    let result = base_wallet::get_balance(invalid_address).await;
+    assert!(result.is_err(), "Invalid Base address should return error");
+}
+
