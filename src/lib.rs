@@ -6,7 +6,7 @@
 pub mod bitcoin_wallet;
 pub mod ethereum_wallet;
 pub mod base_wallet;
-
+pub mod arbitrum_wallet;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +37,7 @@ pub enum Network {
     Bitcoin,
     Ethereum,
     Base,
+    Arbitrum,
 }
 
 impl std::fmt::Display for Network {
@@ -45,6 +46,7 @@ impl std::fmt::Display for Network {
             Network::Bitcoin => write!(f, "bitcoin"),
             Network::Ethereum => write!(f, "ethereum"),
             Network::Base => write!(f, "base"),
+            Network::Arbitrum => write!(f, "arbitrum"),
         }
     }
 }
@@ -57,6 +59,7 @@ impl std::str::FromStr for Network {
             "bitcoin" | "btc" => Ok(Network::Bitcoin),
             "ethereum" | "eth" => Ok(Network::Ethereum),
             "base" => Ok(Network::Base),
+            "arbitrum" | "arb" => Ok(Network::Arbitrum),
             _ => Err(anyhow::anyhow!("Unsupported network: {}", s)),
         }
     }

@@ -3,7 +3,7 @@
 //! These are pass-to-pass tests that verify existing functionality
 //! continues to work as expected.
 
-use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, Network};
+use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, Network};
 
 use std::time::Duration;
 use tokio::time::sleep;
@@ -197,3 +197,45 @@ async fn test_base_invalid_address_returns_error() {
     assert!(result.is_err(), "Invalid Base address should return error");
 }
 
+// ============================================================================
+// FAIL-TO-PASS TESTS: Arbitrum L2 (2 tests) - PR #2
+// ============================================================================
+
+#[tokio::test]
+async fn test_arbitrum_balance_returns_valid_structure() {
+    sleep(Duration::from_secs(1)).await;
+    
+    // Arbitrum Foundation multisig address
+    let address = "0xF3FC178157fb3c87548bAA86F9d24BA38E649B58";
+    let result = arbitrum_wallet::get_balance(address).await;
+    
+    if let Err(e) = &result {
+        eprintln!("Arbitrum API error: {}", e);
+    }
+    
+    assert!(result.is_ok(), "Arbitrum balance fetch should succeed");
+    
+    let balance = result.unwrap();
+    assert_eq!(balance.network, "arbitrum");
+    assert_eq!(balance.denomination, "ETH");
+    assert!(balance.address.starts_with("0x"));
+}
+
+#[tokio::test]
+async fn test_arbitrum_address_with_balance() {
+    sleep(Duration::from_secs(1)).await;
+    
+    // Known address with activity on Arbitrum
+    let address = "0xF3FC178157fb3c87548bAA86F9d24BA38E649B58";
+    let result = arbitrum_wallet::get_balance(address).await;
+    
+    if let Err(e) = &result {
+        eprintln!("Arbitrum balance check error: {}", e);
+        return;
+    }
+    
+    let balance = result.unwrap();
+    assert_eq!(balance.network, "arbitrum");
+    let balance_value: f64 = balance.balance.parse().expect("Should be numeric");
+    assert!(balance_value >= 0.0, "Balance should be non-negative");
+}

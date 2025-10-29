@@ -93,6 +93,8 @@ wallet-balance-cli/
 │   ├── lib.rs                  # Library exports
 │   ├── bitcoin_wallet.rs       # Bitcoin implementation
 │   └── ethereum_wallet.rs      # Ethereum implementation
+    |--- base_wallet.rs          # Base Implementation 
+    |--- arbitrum_wallet.rs    # Arbitrum Implementation.
 └── tests/
     └── tests.rs                # 10 pass-to-pass tests
 ```
@@ -121,8 +123,8 @@ cargo run -- -n ethereum -a 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 - [x] Bitcoin balance checking
 - [x] Ethereum balance checking
 - [ ] Optimism L2 support (PR #1)
-- [ ] Arbitrum L2 support (PR #2)
-- [ ] Base L2 support (PR #3)
+- [x] Arbitrum L2 support (PR #2)
+- [x] Base L2 support (PR #3)
 - [ ] ERC-20 token balance support
 - [ ] Transaction history
 
