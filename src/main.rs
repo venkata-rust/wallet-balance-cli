@@ -4,7 +4,7 @@
 
 use clap::Parser;
 use std::process;
-use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, Network};
+use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, Network};
 
 #[derive(Parser)]
 #[command(name = "wallet-balance")]
@@ -49,6 +49,10 @@ async fn main() {
             println!("Fetching Base L2 balance for address: {}", cli.address);
             base_wallet::get_balance(&cli.address).await
         }
+          Network::Arbitrum => {  // NEW: Add this match arm
+            println!("Fetching Arbitrum L2 balance for address: {}", cli.address);
+            arbitrum_wallet::get_balance(&cli.address).await
+          }
     };
 
     // Display result
