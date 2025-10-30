@@ -3,7 +3,7 @@
 //! These are pass-to-pass tests that verify existing functionality
 //! continues to work as expected.
 
-use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, Network};
+use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, polygon_wallet, Network};
 
 use std::time::Duration;
 use tokio::time::sleep;
@@ -238,4 +238,32 @@ async fn test_arbitrum_address_with_balance() {
     assert_eq!(balance.network, "arbitrum");
     let balance_value: f64 = balance.balance.parse().expect("Should be numeric");
     assert!(balance_value >= 0.0, "Balance should be non-negative");
+}
+// ============================================================================
+// FAIL-TO-PASS TESTS: Polygon PoS (2 tests) - PR #3
+// ============================================================================
+
+#[tokio::test]
+async fn test_polygon_balance_returns_valid_structure() {
+    // Popular Polygon wallet (Polygon Foundation)
+    let address = "0x0000000000000000000000000000000000001010"; // MATIC contract (should always exist)
+    let result = polygon_wallet::get_balance(address).await;
+
+    if let Err(e) = &result {
+        eprintln!("Polygon API error: {}", e);
+    }
+
+    assert!(result.is_ok(), "Polygon balance fetch should succeed");
+
+    let balance = result.unwrap();
+    assert_eq!(balance.network, "polygon");
+    assert_eq!(balance.denomination, "MATIC");
+    assert!(balance.address.starts_with("0x"));
+}
+
+#[tokio::test]
+async fn test_polygon_invalid_address_returns_error() {
+    let invalid_address = "polygon_fail";
+    let result = polygon_wallet::get_balance(invalid_address).await;
+    assert!(result.is_err(), "Invalid Polygon address should return error");
 }
