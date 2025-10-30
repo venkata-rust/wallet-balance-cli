@@ -4,11 +4,12 @@
 
 use clap::Parser;
 use std::process;
-use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, polygon_wallet, Network};
+use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, polygon_wallet,
+    tron_wallet, Network};
 
 #[derive(Parser)]
 #[command(name = "wallet-balance")]
-#[command(author = "Your Name")]
+#[command(author = "Venkata Edara")]
 #[command(version = "0.1.0")]
 #[command(about = "Check cryptocurrency wallet balances", long_about = None)]
 struct Cli {
@@ -56,6 +57,10 @@ async fn main() {
         Network::Polygon => {  // NEW: Add this match arm
                 println!("Fetching Polygon balance for address: {}", cli.address);
                 polygon_wallet::get_balance(&cli.address).await
+            }
+            Network::Tron => {  // NEW: Add this match arm
+                println!("Fetching Tron balance for address: {}", cli.address);
+                tron_wallet::get_balance(&cli.address).await
             }
     };
 

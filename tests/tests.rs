@@ -3,7 +3,8 @@
 //! These are pass-to-pass tests that verify existing functionality
 //! continues to work as expected.
 
-use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, polygon_wallet, Network};
+use wallet_balance::{bitcoin_wallet, ethereum_wallet, base_wallet, arbitrum_wallet, polygon_wallet,
+    tron_wallet, Network};
 
 use std::time::Duration;
 use tokio::time::sleep;
@@ -280,4 +281,31 @@ async fn test_polygon_invalid_address_returns_error() {
     let invalid_address = "polygon_fail";
     let result = polygon_wallet::get_balance(invalid_address).await;
     assert!(result.is_err(), "Invalid Polygon address should return error");
+}
+// ============================================================================
+// FAIL-TO-PASS TESTS: Tron (2 tests) - PR #5
+// ============================================================================
+
+#[tokio::test]
+async fn test_tron_balance_returns_valid_structure() {
+    // Use a valid Tron base58 address (not hex)
+    let address = "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs";
+    let result = tron_wallet::get_balance(address).await;
+
+    if let Err(e) = &result {
+        eprintln!("Tron API error: {}", e);
+    }
+
+    assert!(result.is_ok(), "Tron balance fetch should succeed");
+    let balance = result.unwrap();
+    assert_eq!(balance.network, "tron");
+    assert_eq!(balance.denomination, "TRX");
+    assert!(balance.address.starts_with('T'));
+}
+
+#[tokio::test]
+async fn test_tron_invalid_address_returns_error() {
+    let invalid_address = "0xInvalidAddress";
+    let result = tron_wallet::get_balance(invalid_address).await;
+    assert!(result.is_err(), "Invalid Tron address should return error");
 }
