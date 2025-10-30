@@ -8,6 +8,7 @@ pub mod ethereum_wallet;
 pub mod base_wallet;
 pub mod arbitrum_wallet;
 pub mod polygon_wallet;
+pub mod tron_wallet;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +41,7 @@ pub enum Network {
     Base,
     Arbitrum,
     Polygon,
+    Tron,
 }
 
 impl std::fmt::Display for Network {
@@ -50,6 +52,7 @@ impl std::fmt::Display for Network {
             Network::Base => write!(f, "base"),
             Network::Arbitrum => write!(f, "arbitrum"),
             Network::Polygon => write!(f, "polygon"),
+            Network::Tron => write!(f, "tron"),
         }
     }
 }
@@ -64,6 +67,7 @@ impl std::str::FromStr for Network {
             "base" => Ok(Network::Base),
             "arbitrum" | "arb" => Ok(Network::Arbitrum),
             "polygon" | "matic" => Ok(Network::Polygon),
+            "tron" | "trx" => Ok(Network::Tron),
             _ => Err(anyhow::anyhow!("Unsupported network: {}", s)),
         }
     }
