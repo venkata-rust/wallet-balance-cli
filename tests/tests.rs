@@ -78,6 +78,20 @@ async fn test_bitcoin_p2sh_address_works() {
     assert_eq!(balance.address, address);
 }
 
+#[tokio::test]
+async fn test_bitcoin_balance_returns_valid_structure_1() {
+    let address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"; // Valid, public
+    let result = bitcoin_wallet::get_balance(address).await;
+
+    assert!(result.is_ok(), "Bitcoin balance fetch failed: {:?}", result.err());
+    let balance = result.unwrap();
+
+    assert_eq!(balance.network, "bitcoin");
+    assert_eq!(balance.address, address);
+    assert!(!balance.balance.is_empty());
+    println!("Satoshi balance: {} BTC", balance.balance); // ~50. something
+}
+
 // ============================================================================
 // PASS-TO-PASS TESTS: Ethereum (3 tests)
 // ============================================================================

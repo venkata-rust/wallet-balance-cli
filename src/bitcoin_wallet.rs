@@ -8,13 +8,19 @@ use serde::Deserialize;
 
 use crate::WalletBalance;
 
-const BLOCKCHAIN_INFO_API: &str = "https://blockchain.info";
+// const BLOCKCHAIN_INFO_API: &str = "https://blockchain.info";
+const BLOCKCHAIN_INFO_API: &str = "https://blockstream.info/api";
 
-/// Response structure from Blockchain.com API
+//  Response structure from Blockstream.info API
 #[derive(Debug, Deserialize)]
-struct BlockchainInfoResponse {
-    #[serde(rename = "final_balance")]
-    final_balance: u64,
+struct BlockstreamResponse {
+    chain_stats: ChainStats,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChainStats {
+    funded_txo_sum: u64,  // Total received (in satoshis)
+    spent_txo_sum: u64,   // Total spent (in satoshis)
 }
 
 /// Get Bitcoin wallet balance for a given address
@@ -29,30 +35,33 @@ struct BlockchainInfoResponse {
 pub async fn get_balance(address: &str) -> Result<WalletBalance> {
     validate_address(address)?;
 
-    let url = format!("{}/rawaddr/{}", BLOCKCHAIN_INFO_API, address);
-    
+    let url = format!("{}/address/{}", BLOCKCHAIN_INFO_API, address);
+
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
         .header("User-Agent", "wallet-balance-cli/0.1.0")
         .send()
         .await
-        .context("Failed to send request to Blockchain.com API")?;
+        .context("Failed to send request to Blockstream API")?;
 
     if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
         return Err(anyhow::anyhow!(
-            "API request failed with status: {}",
-            response.status()
+            "API failed: {} - {}",
+            status,
+            body
         ));
     }
 
-    let data: BlockchainInfoResponse = response
+    let data: BlockstreamResponse = response
         .json()
         .await
-        .context("Failed to parse JSON response from Blockchain.com API")?;
+        .context("Failed to parse JSON from Blockstream")?;
 
-    // Convert satoshis to BTC (1 BTC = 100,000,000 satoshis)
-    let balance_btc = data.final_balance as f64 / 100_000_000.0;
+    let balance_sats = data.chain_stats.funded_txo_sum.saturating_sub(data.chain_stats.spent_txo_sum);
+    let balance_btc = balance_sats as f64 / 100_000_000.0;
 
     Ok(WalletBalance::new(
         address.to_string(),
@@ -62,7 +71,6 @@ pub async fn get_balance(address: &str) -> Result<WalletBalance> {
     ))
 }
 
-/// Validate Bitcoin address format (basic validation)
 fn validate_address(address: &str) -> Result<()> {
     if address.is_empty() {
         return Err(anyhow::anyhow!("Bitcoin address cannot be empty"));
