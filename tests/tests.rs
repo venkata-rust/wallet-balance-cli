@@ -309,3 +309,38 @@ async fn test_tron_invalid_address_returns_error() {
     let result = tron_wallet::get_balance(invalid_address).await;
     assert!(result.is_err(), "Invalid Tron address should return error");
 }
+
+// ============================================================================
+// ADDITIONAL TESTS: Arbitrum ERC20 Token Balance (2 tests) - PR #6
+// ============================================================================
+
+#[tokio::test]
+async fn test_arbitrum_erc20_token_balance_valid() {
+    // USDC contract on Arbitrum
+    let usdc_contract = "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8";
+    // Example wallet address with USDC balance
+    let wallet_address = "0x47e7ef8c5c7845449068d290d12115e0a768e0e3";
+
+    let result = arbitrum_wallet::get_erc20_balance(usdc_contract, wallet_address).await;
+
+    if let Err(e) = &result {
+        eprintln!("ERC20 balance fetch error: {}", e);
+    }
+
+    assert!(result.is_ok(), "ERC20 token balance fetch should succeed");
+
+    let balance = result.unwrap();
+    // USDC has 6 decimals, so balance_string might need adjustment, but basic parse test:
+    let numeric_balance: f64 = balance.parse().unwrap_or(0.0);
+    assert!(numeric_balance >= 0.0, "ERC20 token balance should be non-negative");
+}
+
+#[tokio::test]
+async fn test_arbitrum_erc20_token_balance_invalid_contract() {
+    let invalid_contract = "0x123"; // invalid contract addr
+    let wallet_address = "0x47e7ef8c5c7845449068d290d12115e0a768e0e3";
+
+    let result = arbitrum_wallet::get_erc20_balance(invalid_contract, wallet_address).await;
+
+    assert!(result.is_err(), "Fetching token balance from invalid contract should error");
+}
