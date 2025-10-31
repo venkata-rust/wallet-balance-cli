@@ -6,10 +6,15 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use hex::encode as hex_encode;
 
 use crate::WalletBalance;
 
 const ARBITRUM_RPC_URL: &str = "https://arb1.arbitrum.io/rpc";
+
+
+// ERC20 balanceOf function selector: first 4 bytes of keccak256("balanceOf(address)")
+const BALANCE_OF_SELECTOR: &str = "70a08231";
 
 /// JSON-RPC request structure
 #[derive(Debug, Serialize)]
@@ -159,4 +164,80 @@ fn wei_to_eth(wei: u128) -> String {
     let trimmed = fraction_str.trim_end_matches('0');
     
     format!("{}.{}", eth_whole, trimmed)
+}
+
+/// Get ERC20 token balance of a wallet on Arbitrum
+///
+/// # Arguments
+///
+/// * `token_address` - ERC20 token contract address (0x prefixed)
+/// * `wallet_address` - Wallet address to check balance for (0x prefixed)
+///
+/// # Returns
+///
+/// Returns token balance as a decimal string (assumes token has 18 decimals)
+pub async fn get_erc20_balance(token_address: &str, wallet_address: &str) -> Result<String> {
+    let token_address = normalize_address(token_address)?;
+    let wallet_address = normalize_address(wallet_address)?;
+    validate_address(&token_address)?;
+    validate_address(&wallet_address)?;
+
+    // ABI encode call data: selector + padded wallet address (20 bytes)
+    // balanceOf(address) signature: 0x70a08231 + 12 bytes zero + 20 bytes wallet address
+
+    let mut data = hex::decode(BALANCE_OF_SELECTOR).unwrap();
+    let wallet_clean = wallet_address.trim_start_matches("0x");
+
+    // Pad the wallet address to 32 bytes (left padded with zeros)
+    let padded_wallet = hex::decode(format!("{:0>64}", wallet_clean))
+        .context("Invalid wallet address for ABI encoding")?;
+    data.extend(padded_wallet);
+
+    let call_data = format!("0x{}", hex_encode(&data));
+
+    // Prepare eth_call JSON-RPC request
+    #[derive(Serialize)]
+    struct EthCallParams {
+        to: String,
+        data: String,
+    }
+
+    let request = JsonRpcRequest {
+        jsonrpc: "2.0".to_string(),
+        method: "eth_call".to_string(),
+        params: vec![json!(EthCallParams { to: token_address, data: call_data }), json!("latest")],
+        id: 1,
+    };
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(ARBITRUM_RPC_URL)
+        .header("Content-Type", "application/json")
+        .json(&request)
+        .send()
+        .await
+        .context("Failed to send eth_call request")?;
+
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!("eth_call failed with status: {}", response.status()));
+    }
+
+    let rpc_response: JsonRpcResponse = response
+        .json()
+        .await
+        .context("Failed to parse JSON response")?;
+
+    if let Some(error) = rpc_response.error {
+        return Err(anyhow::anyhow!("eth_call RPC error {}: {}", error.code, error.message));
+    }
+
+    let balance_hex = rpc_response
+        .result
+        .ok_or_else(|| anyhow::anyhow!("No result in eth_call response"))?;
+
+    let balance_wei = parse_hex_to_u128(&balance_hex)?;
+    // For ERC20 tokens, decimals may vary, but assuming 18 decimals by default here
+    let balance_decimal = wei_to_eth(balance_wei);
+
+    Ok(balance_decimal)
 }
